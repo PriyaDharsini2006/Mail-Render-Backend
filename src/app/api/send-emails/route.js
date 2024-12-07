@@ -7,7 +7,6 @@ import { read, utils } from 'xlsx';
 // CORS headers handling
 const corsHeaders = {
   'Access-Control-Allow-Origin': 'https://internal-od.vercel.app/teamlead',
-
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
