@@ -3,9 +3,9 @@ import fs from 'fs/promises';
 import path from 'path';
 import nodemailer from 'nodemailer';
 import { read, utils } from 'xlsx';
+
 // CORS headers handling
 const corsHeaders = {
-  // 'Access-Control-Allow-Origin': 'https://internal-od.vercel.app/teamlead',
   'Access-Control-Allow-Origin': 'http://localhost:3000',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
@@ -26,14 +26,15 @@ export async function POST(req) {
   const response = {
     headers: corsHeaders
   };
+  console.log('Request headers:', Object.fromEntries(req.headers));
 
   try {
     // Validate environment variables
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
       console.error('Missing email credentials');
-      return NextResponse.json({ 
-        error: 'Email credentials not configured' 
-      }, { 
+      return NextResponse.json({
+        error: 'Email credentials not configured'
+      }, {
         status: 500,
         ...response
       });
@@ -42,9 +43,9 @@ export async function POST(req) {
     // Check if the request is a multipart/form-data request
     const contentType = req.headers.get('content-type');
     if (!contentType?.includes('multipart/form-data')) {
-      return NextResponse.json({ 
-        error: 'Invalid request format. Must be multipart/form-data' 
-      }, { 
+      return NextResponse.json({
+        error: 'Invalid request format. Must be multipart/form-data'
+      }, {
         status: 400,
         ...response
       });
@@ -55,12 +56,18 @@ export async function POST(req) {
     const formData = await req.formData();
     const excelFile = formData.get('file');
     const subject = formData.get('subject')?.toString() || 'Automated Email';
+    const hallValue = formData.get('hall')?.toString() || '';
+    const noteValue = formData.get('note')?.toString() || '';
+
+    console.log('Extracted values:');
+    console.log('Hall:', hallValue);
+    console.log('Note:', noteValue);
 
     if (!excelFile || !(excelFile instanceof File)) {
       console.error('No Excel file uploaded');
-      return NextResponse.json({ 
-        error: 'Excel file is required' 
-      }, { 
+      return NextResponse.json({
+        error: 'Excel file is required'
+      }, {
         status: 400,
         ...response
       });
@@ -68,7 +75,9 @@ export async function POST(req) {
 
     // Read constant template
     const templatePath = path.join(process.cwd(), 'src', 'app', 'template', 'template1.html');
-    const htmlContent = await fs.readFile(templatePath, 'utf-8');
+    let htmlContent = await fs.readFile(templatePath, 'utf-8');
+    htmlContent = htmlContent.replace('{{Hall}}', hallValue);
+    htmlContent = htmlContent.replace('{{Note}}', noteValue);
 
     // Read Excel file
     const arrayBuffer = await excelFile.arrayBuffer();
@@ -82,8 +91,8 @@ export async function POST(req) {
 
     if (!data || data.length === 0) {
       console.error('No data found in Excel file');
-      return NextResponse.json({ 
-        error: 'No data found in Excel file' 
+      return NextResponse.json({
+        error: 'No data found in Excel file'
       }, { status: 400 });
     }
 
@@ -137,17 +146,17 @@ export async function POST(req) {
       }
     }
 
-    return NextResponse.json({ 
-      message: 'Emails processed', 
-      results: emailResults 
+    return NextResponse.json({
+      message: 'Emails processed',
+      results: emailResults
     }, response);
 
   } catch (error) {
     console.error('Comprehensive error:', error);
-    return NextResponse.json({ 
-      error: 'Failed to send emails', 
-      details: (error).message 
-    }, { 
+    return NextResponse.json({
+      error: 'Failed to send emails',
+      details: (error).message
+    }, {
       status: 500,
       ...response
     });
