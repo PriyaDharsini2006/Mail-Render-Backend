@@ -6,7 +6,7 @@ import { read, utils } from 'xlsx';
 
 // CORS headers handling
 const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://internal-od.vercel.app',
+  'Access-Control-Allow-Origin': 'http://localhost:3000',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
@@ -20,6 +20,30 @@ export async function OPTIONS() {
 }
 
 export const dynamic = 'force-dynamic';
+
+// Function to format date in en-GB format
+function formatDateGB(dateInput) {
+  // If no date is provided, return empty string
+  if (!dateInput) return '';
+
+  try {
+    // Try to parse the date input
+    const date = new Date(dateInput);
+    
+    // If date is invalid, return empty string
+    if (isNaN(date.getTime())) return '';
+
+    // Format date in en-GB format (DD/MM/YYYY)
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch (error) {
+    console.error('Date formatting error:', error);
+    return '';
+  }
+}
 
 export async function POST(req) {
   console.log('Email sending route hit');
@@ -50,7 +74,6 @@ export async function POST(req) {
         ...response
       });
     }
-
 
     // Parse form data
     const formData = await req.formData();
@@ -121,7 +144,15 @@ export async function POST(req) {
       // Replace placeholders in HTML template
       let personalizedHtml = htmlContent;
       Object.keys(row).forEach(key => {
-        personalizedHtml = personalizedHtml.replace(new RegExp(`{{${key}}}`, 'g'), row[key] || '');
+        // If the key is a date, format it in en-GB
+        const value = key.toLowerCase().includes('date') 
+          ? formatDateGB(row[key]) 
+          : row[key] || '';
+        
+        personalizedHtml = personalizedHtml.replace(
+          new RegExp(`{{${key}}}`, 'g'), 
+          value
+        );
       });
 
       try {
